@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "BulkPost": {
+      "title": "Bulk Post Item",
+      "description": "Represents a single generated post item containing prompt, image URL, and Facebook caption",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "index": { "type": "integer" },
+        "prompt": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["idle", "generating-image", "generating-caption", "completed", "error"] },
+        "error": { "type": "string", "maxLength": 1000 },
+        "imageUrl": { "type": "string", "maxLength": 5000 },
+        "caption": { "type": "string", "maxLength": 10000 },
+        "wordCount": { "type": "integer" },
+        "filenameBase": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "index", "prompt", "status", "filenameBase"]
+    },
+    "UserSettings": {
+      "title": "User Generation Settings",
+      "description": "Persisted generation defaults per user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "tone": { "type": "string", "maxLength": 64 },
+        "language": { "type": "string", "maxLength": 64 },
+        "style": { "type": "string", "maxLength": 64 },
+        "aspectRatio": { "type": "string", "maxLength": 16 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "tone", "language", "style", "aspectRatio"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/BulkPost" },
+      "description": "Stores user generated post items"
+    },
+    "/settings/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "User preference settings"
+    }
+  }
+}

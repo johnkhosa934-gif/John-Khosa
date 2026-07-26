@@ -1,0 +1,6 @@
+{
+  "name": "Bulk Image & FB Caption Generator",
+  "description": "Generate bulk AI images with 200-400 word Facebook captions from prompts, then export matching images and text files in a ZIP archive.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

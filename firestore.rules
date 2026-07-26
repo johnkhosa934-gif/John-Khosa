@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Posts Collection Rules
+    match /posts/{postId} {
+      function isValidPost(data) {
+        return data.keys().hasAll(['id', 'userId', 'index', 'prompt', 'status', 'filenameBase'])
+          && data.id is string && data.id.size() <= 128
+          && data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid
+          && data.index is int && data.index >= 0
+          && data.prompt is string && data.prompt.size() <= 2000
+          && data.status in ['idle', 'generating-image', 'generating-caption', 'completed', 'error']
+          && data.filenameBase is string && data.filenameBase.size() <= 256
+          && (!('error' in data) || (data.error is string && data.error.size() <= 1000))
+          && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 5000))
+          && (!('caption' in data) || (data.caption is string && data.caption.size() <= 10000))
+          && (!('wordCount' in data) || (data.wordCount is int && data.wordCount >= 0));
+      }
+
+      // Read single post
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+
+      // List posts: query enforcer checking userId filter
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // Create post
+      allow create: if isSignedIn()
+        && isValidId(postId)
+        && isValidPost(incoming());
+
+      // Update post
+      allow update: if isSignedIn()
+        && existing().userId == request.auth.uid
+        && isValidPost(incoming())
+        && incoming().userId == existing().userId;
+
+      // Delete post
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // User Settings Collection Rules
+    match /settings/{userId} {
+      function isValidSettings(data) {
+        return data.keys().hasAll(['userId', 'tone', 'language', 'style', 'aspectRatio'])
+          && data.userId is string && data.userId == request.auth.uid
+          && data.tone is string && data.tone.size() <= 64
+          && data.language is string && data.language.size() <= 64
+          && data.style is string && data.style.size() <= 64
+          && data.aspectRatio is string && data.aspectRatio.size() <= 16;
+      }
+
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidSettings(incoming());
+      allow delete: if isOwner(userId);
+    }
+  }
+}
